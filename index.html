@@ -14,44 +14,20 @@
 
 body{
   margin:0;
-  background:black;
+  background:var(--dark);
   color:white;
   font-family:system-ui;
-  min-height:100vh;
-  overflow:hidden;
-}
-
-/* ===== YOUTUBE BACKGROUND ===== */
-.bg-video{
-  position:fixed;
-  inset:0;
-  z-index:-2;
-  opacity:0;
-  transition:opacity .6s ease;
-}
-
-.bg-video iframe{
-  width:100vw;
-  height:100vh;
-  object-fit:cover;
-  filter:blur(18px) brightness(.55);
-}
-
-/* aktif saat play */
-.bg-video.active{
-  opacity:1;
-}
-
-/* ===== PLAYER ===== */
-.player{
-  position:relative;
-  z-index:2;
-  max-width:420px;
-  margin:20px auto;
-  background:linear-gradient(180deg,rgba(20,20,20,.85),rgba(0,0,0,.85));
-  border-radius:20px;
+  display:flex;
+  justify-content:center;
   padding:20px;
-  backdrop-filter:blur(8px);
+}
+
+.player{
+  width:100%;
+  max-width:420px;
+  background:linear-gradient(180deg,#2a2a2a,#121212);
+  border-radius:18px;
+  padding:20px;
 }
 
 .header{text-align:center;font-weight:bold;margin-bottom:14px}
@@ -63,11 +39,11 @@ body{
   margin-bottom:10px;
 }
 
-/* VISUALIZER */
+/* ===== VISUALIZER ===== */
 .visualizer{
   display:flex;
-  justify-content:center;
   align-items:flex-end;
+  justify-content:center;
   height:140px;
   gap:6px;
   margin-bottom:16px;
@@ -77,10 +53,9 @@ body{
   height:20px;
   background:#1db954;
   border-radius:4px;
-  transition:height .12s;
+  transition:height .1s;
 }
 
-/* TIME */
 .time{
   display:flex;
   justify-content:space-between;
@@ -91,6 +66,7 @@ body{
 input[type=range]{
   width:100%;
   margin:8px 0 18px;
+  -webkit-appearance:none;
   appearance:none;
   height:4px;
   border-radius:4px;
@@ -103,23 +79,25 @@ input[type=range]{
   );
 }
 input[type=range]::-webkit-slider-thumb{
-  appearance:none;
+  -webkit-appearance:none;
   width:14px;height:14px;
   border-radius:50%;
   background:#1db954;
 }
 
-/* CONTROLS */
+/* ===== CONTROLS ===== */
 .controls{
   display:flex;
   justify-content:center;
   gap:18px;
+  margin-bottom:10px;
 }
+
 .controls button{
   width:48px;
   height:48px;
   border-radius:50%;
-  border:1px solid #1f1f1f;
+  border:1px solid #1f1f1f; /* TIPIS */
   background:transparent;
   color:#9a9a9a;
   font-size:22px;
@@ -127,10 +105,14 @@ input[type=range]::-webkit-slider-thumb{
   display:flex;
   align-items:center;
   justify-content:center;
-  transition:.25s;
+  transition:all .25s ease;
 }
-.controls button:active{transform:scale(.94)}
 
+.controls button:active{
+  transform:scale(0.94);
+}
+
+/* ===== ACTIVE: OUTLINE TIPIS + INNER SHADOW ===== */
 .controls button.active,
 #playBtn.playing{
   color:#1db954;
@@ -140,41 +122,56 @@ input[type=range]::-webkit-slider-thumb{
     0 0 6px rgba(29,185,84,.25);
 }
 
+/* PLAY lebih besar */
 #playBtn{
   width:64px;
   height:64px;
   font-size:26px;
+  border-width:1.2px;
 }
 
-/* MODAL */
+.playlist-btn{
+  text-align:center;
+  color:#1db954;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+/* ===== MODAL ===== */
 .modal{
   position:fixed;
   inset:0;
-  background:rgba(0,0,0,.5);
+  background:rgba(0,0,0,.45);
+  backdrop-filter:blur(7px);
   display:none;
   align-items:center;
   justify-content:center;
 }
 .modal.active{display:flex}
+
 .modal-content{
   width:90%;max-width:360px;
   border-radius:18px;
   padding:18px;
   background:linear-gradient(180deg,#1db954cc,#0f3d24 60%,#121212);
 }
+.modal-content h3{text-align:center;margin:0 0 12px}
+
+.playlist{padding:0;margin:0}
 .playlist li{
   list-style:none;
-  padding:12px;
+  padding:12px 10px;
   cursor:pointer;
+  color:#e5ffe5;
 }
-.playlist li:hover{background:rgba(29,185,84,.25)}
+.playlist li:hover{
+  background:rgba(29,185,84,.25);
+  border-radius:8px;
+}
 </style>
 </head>
 
 <body>
-
-<!-- BACKGROUND VIDEO -->
-<div class="bg-video" id="bgVideo"></div>
 
 <div class="player">
   <div class="header">My Music</div>
@@ -202,13 +199,12 @@ input[type=range]::-webkit-slider-thumb{
     <button id="nextBtn">⏭️</button>
   </div>
 
-  <div style="text-align:center;color:#1db954;cursor:pointer" id="openPlaylist">
-    📂 Playlist
-  </div>
+  <div class="playlist-btn" id="openPlaylist">📂 Playlist</div>
 </div>
 
 <div class="modal" id="modal">
   <div class="modal-content">
+    <h3 id="modalTitle">Playlist</h3>
     <ul class="playlist" id="playlist"></ul>
   </div>
 </div>
@@ -218,21 +214,19 @@ input[type=range]::-webkit-slider-thumb{
 <script>
 const playlists={
   Remix:[
-    {
-      name:"BINTANG 5",
-      file:"DJBINTANG5.mp3",
-      video:"https://www.youtube.com/watch?v=OuKnhKiNTFw"
-    },
-    {
-      name:"EMANEN WAKTU",
-      file:"DJEMANENWAKTU.mp3",
-      video:"https://www.youtube.com/embed/VIDEO_ID_2"
-    }
+    "DJBINTANG5.mp3","DJEMANENWAKTUMU.mp3","DJJAUHKOPERGI.mp3",
+    "DJKELINGANMANTAN.mp3","DJMENCINTAIDENGANNGEYEL.mp3",
+    "DJNRESNANI.mp3","DJSEDIAAKU.mp3","DJTORMONITOR.mp3","DJTRESNOLIYANE.mp3"
+  ],
+  Dangdut:[
+    "AKUCAHKERCO.mp3","BENCIKUSANGKA.mp3","JEJALEN.mp3",
+    "KELINGANMANTAN.mp3","LAMUNAN.mp3","LESTARI.mp3",
+    "MENCINTAIDENGANNGEYEL.mp3","NRESNANI.mp3","PELASTERI.mp3",
+    "ROPPANG.mp3","TULUS.mp3","PURNAMAMERINDU.mp3"
   ]
 };
 
 const audio=document.getElementById("audio");
-const bgVideo=document.getElementById("bgVideo");
 const bars=document.querySelectorAll(".bar");
 const playBtn=document.getElementById("playBtn");
 const shuffleBtn=document.getElementById("shuffleBtn");
@@ -246,9 +240,11 @@ const openPlaylist=document.getElementById("openPlaylist");
 const currentEl=document.getElementById("current");
 const durationEl=document.getElementById("duration");
 const progress=document.getElementById("progress");
+const modalTitle=document.getElementById("modalTitle");
 
 let currentSongs=[],currentIndex=0;
-let shuffle=false,repeatMode=0;
+let shuffle=false;
+let repeatMode=0;
 
 setInterval(()=>{
   bars.forEach(b=>{
@@ -256,27 +252,41 @@ setInterval(()=>{
   });
 },120);
 
-function showSongs(){
+function cleanName(f){
+  return f.replace(".mp3","").replace(/^DJ/i,"").replace(/_/g," ");
+}
+
+function showFolders(){
   playlistEl.innerHTML="";
-  currentSongs=playlists.Remix;
+  modalTitle.textContent="Playlist";
+  Object.keys(playlists).forEach(folder=>{
+    const li=document.createElement("li");
+    li.textContent="📁 "+folder;
+    li.onclick=()=>showSongs(folder);
+    playlistEl.appendChild(li);
+  });
+}
+
+function showSongs(folder){
+  currentSongs=playlists[folder].map(f=>({name:cleanName(f),url:`lagu/${folder}/${f}`}));
+  playlistEl.innerHTML="";
+  modalTitle.textContent=folder;
+
   currentSongs.forEach((s,i)=>{
     const li=document.createElement("li");
     li.textContent="🎵 "+s.name;
-    li.onclick=()=>{playSong(i);modal.classList.remove("active");};
+    li.onclick=()=>{
+      playSong(i);
+      modal.classList.remove("active");
+    };
     playlistEl.appendChild(li);
   });
 }
 
 function playSong(i){
   currentIndex=i;
-  const song=currentSongs[i];
-  audio.src="lagu/Remix/"+song.file;
-  coverTitle.textContent=song.name;
-
-  bgVideo.innerHTML=
-   `<iframe src="${song.video}?autoplay=1&mute=1&loop=1&playlist=${song.video.split('/').pop()}" frameborder="0" allow="autoplay"></iframe>`;
-  bgVideo.classList.add("active");
-
+  audio.src=currentSongs[i].url;
+  coverTitle.textContent=currentSongs[i].name;
   audio.play();
   playBtn.textContent="⏸️";
   playBtn.classList.add("playing");
@@ -285,18 +295,49 @@ function playSong(i){
 playBtn.onclick=()=>{
   if(audio.paused){
     audio.play();
-    bgVideo.classList.add("active");
     playBtn.textContent="⏸️";
     playBtn.classList.add("playing");
   }else{
     audio.pause();
-    bgVideo.classList.remove("active");
     playBtn.textContent="▶️";
     playBtn.classList.remove("playing");
   }
 };
 
-audio.onended=()=>bgVideo.classList.remove("active");
+shuffleBtn.onclick=()=>{
+  shuffle=!shuffle;
+  shuffleBtn.classList.toggle("active",shuffle);
+};
+
+repeatBtn.onclick=()=>{
+  repeatMode=(repeatMode+1)%3;
+  repeatBtn.classList.toggle("active",repeatMode>0);
+  repeatBtn.textContent=repeatMode===2?"🔂":"🔁";
+};
+
+function nextSong(){
+  currentIndex++;
+  if(currentIndex>=currentSongs.length){
+    if(repeatMode===1) currentIndex=0;
+    else return;
+  }
+  playSong(currentIndex);
+}
+
+function prevSong(){
+  currentIndex=Math.max(0,currentIndex-1);
+  playSong(currentIndex);
+}
+
+nextBtn.onclick=nextSong;
+prevBtn.onclick=prevSong;
+
+audio.onended=()=>{
+  if(repeatMode===2){
+    audio.currentTime=0;
+    audio.play();
+  }else nextSong();
+};
 
 audio.ontimeupdate=()=>{
   const p=(audio.currentTime/audio.duration)*100||0;
@@ -307,7 +348,10 @@ audio.ontimeupdate=()=>{
 audio.onloadedmetadata=()=>durationEl.textContent=format(audio.duration);
 progress.oninput=()=>audio.currentTime=(progress.value/100)*audio.duration;
 
-openPlaylist.onclick=()=>{modal.classList.add("active");showSongs();}
+openPlaylist.onclick=()=>{
+  modal.classList.add("active");
+  showFolders();
+};
 modal.onclick=e=>e.target===modal&&modal.classList.remove("active");
 
 function format(s){
