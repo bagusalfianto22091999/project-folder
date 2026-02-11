@@ -20,12 +20,29 @@ body{
   display:flex;
   justify-content:center;
   padding:20px;
+  overflow:hidden;
 }
 
+/* ===== YOUTUBE BACKGROUND ===== */
+#yt-bg{
+  position:fixed;
+  inset:0;
+  z-index:-1;
+  filter: blur(18px) grayscale(100%) brightness(.55);
+  transform: scale(1.2);
+  pointer-events:none;
+}
+#yt-bg iframe{
+  width:100%;
+  height:100%;
+}
+
+/* ===== PLAYER ===== */
 .player{
   width:100%;
   max-width:420px;
-  background:linear-gradient(180deg,#2a2a2a,#121212);
+  background:linear-gradient(180deg,#2a2a2acc,#121212ee);
+  backdrop-filter:blur(8px);
   border-radius:18px;
   padding:20px;
 }
@@ -53,7 +70,7 @@ body{
   height:20px;
   background:#1db954;
   border-radius:4px;
-  transition:height .1s;
+  transition:height .18s cubic-bezier(.4,0,.2,1);
 }
 
 .time{
@@ -97,7 +114,7 @@ input[type=range]::-webkit-slider-thumb{
   width:48px;
   height:48px;
   border-radius:50%;
-  border:1px solid #1f1f1f; /* TIPIS */
+  border:1px solid #1f1f1f;
   background:transparent;
   color:#9a9a9a;
   font-size:22px;
@@ -107,12 +124,8 @@ input[type=range]::-webkit-slider-thumb{
   justify-content:center;
   transition:all .25s ease;
 }
+.controls button:active{transform:scale(0.94)}
 
-.controls button:active{
-  transform:scale(0.94);
-}
-
-/* ===== ACTIVE: OUTLINE TIPIS + INNER SHADOW ===== */
 .controls button.active,
 #playBtn.playing{
   color:#1db954;
@@ -122,12 +135,10 @@ input[type=range]::-webkit-slider-thumb{
     0 0 6px rgba(29,185,84,.25);
 }
 
-/* PLAY lebih besar */
 #playBtn{
   width:64px;
   height:64px;
   font-size:26px;
-  border-width:1.2px;
 }
 
 .playlist-btn{
@@ -173,6 +184,9 @@ input[type=range]::-webkit-slider-thumb{
 
 <body>
 
+<!-- BACKGROUND VIDEO -->
+<div id="yt-bg"></div>
+
 <div class="player">
   <div class="header">My Music</div>
   <div class="song-title" id="coverTitle">Pilih Lagu</div>
@@ -189,7 +203,7 @@ input[type=range]::-webkit-slider-thumb{
     <span id="duration">0:00</span>
   </div>
 
-  <input type="range" id="progress" value="0">
+  <input type="range" id="progress" value="0" max="100">
 
   <div class="controls">
     <button id="prevBtn">⏮️</button>
@@ -209,22 +223,46 @@ input[type=range]::-webkit-slider-thumb{
   </div>
 </div>
 
-<audio id="audio"></audio>
+<audio id="audio" preload="metadata"></audio>
+
+<!-- YOUTUBE API -->
+<script src="https://www.youtube.com/iframe_api"></script>
 
 <script>
+/* ===== PLAYLIST ===== */
 const playlists={
   Remix:[
-    "DJBINTANG5.mp3","DJEMANENWAKTUMU.mp3","DJJAUHKOPERGI.mp3",
-    "DJKELINGANMANTAN.mp3","DJMENCINTAIDENGANNGEYEL.mp3",
-    "DJNRESNANI.mp3","DJSEDIAAKU.mp3","DJTORMONITOR.mp3","DJTRESNOLIYANE.mp3"
+    "DJBINTANG5.mp3","DJEMANENWAKTU.mp3","DJJAUHKOPERGI.mp3"
   ],
   Dangdut:[
-    "AKUCAHKERCO.mp3","BENCIKUSANGKA.mp3","JEJALEN.mp3",
-    "KELINGANMANTAN.mp3","LAMUNAN.mp3","LESTARI.mp3",
-    "MENCINTAIDENGANNGEYEL.mp3","NRESNANI.mp3","PELASTERI.mp3",
-    "ROPPANG.mp3","TULUS.mp3","PURNAMAMERINDU.mp3"
+    "AKUCAHKERCO.mp3","BENCIKUSANGKA.mp3","JEJALEN.mp3"
   ]
 };
+
+/* ===== YOUTUBE MAP (GANTI VIDEO ID) ===== */
+const ytMap={
+  "BINTANG 5":"rxekjz73d2Q",
+  "EMANEN WAKTU":"9bZkp7q19f0",
+  "JEJALEN":"OPf0YbXqDm0"
+};
+
+let ytPlayer;
+function onYouTubeIframeAPIReady(){
+  ytPlayer=new YT.Player("yt-bg",{
+    videoId:"",
+    playerVars:{
+      autoplay:1,
+      controls:0,
+      mute:1,
+      loop:1,
+      playlist:"",
+      playsinline:1,
+      modestbranding:1,
+      rel:0
+    },
+    events:{onReady:e=>e.target.mute()}
+  });
+}
 
 const audio=document.getElementById("audio");
 const bars=document.querySelectorAll(".bar");
@@ -271,7 +309,6 @@ function showSongs(folder){
   currentSongs=playlists[folder].map(f=>({name:cleanName(f),url:`lagu/${folder}/${f}`}));
   playlistEl.innerHTML="";
   modalTitle.textContent=folder;
-
   currentSongs.forEach((s,i)=>{
     const li=document.createElement("li");
     li.textContent="🎵 "+s.name;
@@ -290,6 +327,12 @@ function playSong(i){
   audio.play();
   playBtn.textContent="⏸️";
   playBtn.classList.add("playing");
+
+  const ytId=ytMap[currentSongs[i].name];
+  if(ytId && ytPlayer){
+    ytPlayer.loadVideoById({videoId:ytId,startSeconds:0});
+    ytPlayer.mute();
+  }
 }
 
 playBtn.onclick=()=>{
@@ -304,10 +347,7 @@ playBtn.onclick=()=>{
   }
 };
 
-shuffleBtn.onclick=()=>{
-  shuffle=!shuffle;
-  shuffleBtn.classList.toggle("active",shuffle);
-};
+shuffleBtn.onclick=()=>shuffleBtn.classList.toggle("active",shuffle=!shuffle);
 
 repeatBtn.onclick=()=>{
   repeatMode=(repeatMode+1)%3;
@@ -316,28 +356,22 @@ repeatBtn.onclick=()=>{
 };
 
 function nextSong(){
-  currentIndex++;
-  if(currentIndex>=currentSongs.length){
-    if(repeatMode===1) currentIndex=0;
-    else return;
-  }
+  currentIndex=shuffle
+    ?Math.floor(Math.random()*currentSongs.length)
+    :currentIndex+1>=currentSongs.length
+      ?(repeatMode===1?0:currentIndex)
+      :currentIndex+1;
   playSong(currentIndex);
 }
 
 function prevSong(){
-  currentIndex=Math.max(0,currentIndex-1);
-  playSong(currentIndex);
+  audio.currentTime>3?audio.currentTime=0:playSong((currentIndex-1+currentSongs.length)%currentSongs.length);
 }
 
 nextBtn.onclick=nextSong;
 prevBtn.onclick=prevSong;
 
-audio.onended=()=>{
-  if(repeatMode===2){
-    audio.currentTime=0;
-    audio.play();
-  }else nextSong();
-};
+audio.onended=()=>repeatMode===2?(audio.currentTime=0,audio.play()):nextSong();
 
 audio.ontimeupdate=()=>{
   const p=(audio.currentTime/audio.duration)*100||0;
