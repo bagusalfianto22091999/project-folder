@@ -3,54 +3,81 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Music Player</title>
+<title>My Music</title>
 
 <style>
 :root{
   --green:#1db954;
   --dark:#121212;
 }
-
 *{box-sizing:border-box}
 
 body{
   margin:0;
-  background:var(--dark);
+  background:black;
   color:white;
   font-family:system-ui;
-  display:flex;
-  justify-content:center;
-  padding:20px;
+  min-height:100vh;
+  overflow:hidden;
 }
 
+/* ===== YOUTUBE BACKGROUND ===== */
+.bg-video{
+  position:fixed;
+  inset:0;
+  z-index:-2;
+  opacity:0;
+  transition:opacity .6s ease;
+}
+
+.bg-video iframe{
+  width:100vw;
+  height:100vh;
+  object-fit:cover;
+  filter:blur(18px) brightness(.55);
+}
+
+/* aktif saat play */
+.bg-video.active{
+  opacity:1;
+}
+
+/* ===== PLAYER ===== */
 .player{
-  width:100%;
+  position:relative;
+  z-index:2;
   max-width:420px;
-  background:linear-gradient(180deg,#2a2a2a,#121212);
-  border-radius:18px;
+  margin:20px auto;
+  background:linear-gradient(180deg,rgba(20,20,20,.85),rgba(0,0,0,.85));
+  border-radius:20px;
   padding:20px;
+  backdrop-filter:blur(8px);
 }
 
-.header{
+.header{text-align:center;font-weight:bold;margin-bottom:14px}
+
+.song-title{
   text-align:center;
   font-weight:bold;
-  margin-bottom:14px;
+  color:#1db954;
+  margin-bottom:10px;
 }
 
-.cover{
-  height:160px;
-  border-radius:14px;
-  background:linear-gradient(135deg,#1db95455,#000);
+/* VISUALIZER */
+.visualizer{
   display:flex;
-  align-items:center;
   justify-content:center;
-  cursor:pointer;
+  align-items:flex-end;
+  height:140px;
+  gap:6px;
   margin-bottom:16px;
 }
-.cover h1{
-  margin:0;
-  color:#1db954;
-  text-align:center;
+.bar{
+  width:6px;
+  height:20px;
+  background:#1db954;
+  border-radius:4px;
+  transition:height .12s;
 }
 
 /* TIME */
@@ -64,15 +91,20 @@ body{
 input[type=range]{
   width:100%;
   margin:8px 0 18px;
-  -webkit-appearance:none;
+  appearance:none;
   height:4px;
   border-radius:4px;
-  background:#333;
+  background:linear-gradient(
+    to right,
+    #1db954 0%,
+    #1db954 var(--seek,0%),
+    #333 var(--seek,0%),
+    #333 100%
+  );
 }
 input[type=range]::-webkit-slider-thumb{
-  -webkit-appearance:none;
-  width:14px;
-  height:14px;
+  appearance:none;
+  width:14px;height:14px;
   border-radius:50%;
   background:#1db954;
 }
@@ -84,81 +116,75 @@ input[type=range]::-webkit-slider-thumb{
   gap:18px;
 }
 .controls button{
-  background:none;
-  border:none;
-  color:white;
-  font-size:24px;
+  width:48px;
+  height:48px;
+  border-radius:50%;
+  border:1px solid #1f1f1f;
+  background:transparent;
+  color:#9a9a9a;
+  font-size:22px;
   cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:.25s;
 }
-.controls button.active{color:#1db954}
+.controls button:active{transform:scale(.94)}
+
+.controls button.active,
+#playBtn.playing{
+  color:#1db954;
+  border-color:rgba(29,185,84,.55);
+  box-shadow:
+    inset 0 0 6px rgba(29,185,84,.35),
+    0 0 6px rgba(29,185,84,.25);
+}
+
+#playBtn{
+  width:64px;
+  height:64px;
+  font-size:26px;
+}
 
 /* MODAL */
 .modal{
   position:fixed;
   inset:0;
-  background:rgba(0,0,0,.45);
-  backdrop-filter:blur(7px);
+  background:rgba(0,0,0,.5);
   display:none;
   align-items:center;
   justify-content:center;
 }
 .modal.active{display:flex}
-
 .modal-content{
-  width:90%;
-  max-width:360px;
+  width:90%;max-width:360px;
   border-radius:18px;
   padding:18px;
-  background:
-    linear-gradient(180deg,#1db954cc,#0f3d24 60%,#121212);
-}
-
-.modal-content h3{
-  text-align:center;
-  margin:0 0 12px;
-}
-
-/* PLAYLIST */
-.playlist{
-  padding:0;
-  margin:0;
+  background:linear-gradient(180deg,#1db954cc,#0f3d24 60%,#121212);
 }
 .playlist li{
   list-style:none;
-  padding:12px 10px;
+  padding:12px;
   cursor:pointer;
-  color:#e5ffe5;
-  position:relative;
 }
-.playlist li:not(:last-child)::after{
-  content:"";
-  position:absolute;
-  bottom:0;
-  left:10px;
-  right:10px;
-  height:1px;
-  background:rgba(255,255,255,.15);
-}
-.playlist li:hover{
-  background:rgba(29,185,84,.25);
-  border-radius:8px;
-}
-.playlist li.active{
-  background:#1db954;
-  color:#121212;
-  font-weight:bold;
-  border-radius:8px;
-}
+.playlist li:hover{background:rgba(29,185,84,.25)}
 </style>
 </head>
 
 <body>
 
+<!-- BACKGROUND VIDEO -->
+<div class="bg-video" id="bgVideo"></div>
+
 <div class="player">
   <div class="header">My Music</div>
+  <div class="song-title" id="coverTitle">Pilih Lagu</div>
 
-  <div class="cover" id="openPlaylist">
-    <h1 id="coverTitle">Daftar Lagu</h1>
+  <div class="visualizer">
+    <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+    <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+    <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+    <div class="bar"></div>
   </div>
 
   <div class="time">
@@ -175,11 +201,14 @@ input[type=range]::-webkit-slider-thumb{
     <button id="repeatBtn">🔁</button>
     <button id="nextBtn">⏭️</button>
   </div>
+
+  <div style="text-align:center;color:#1db954;cursor:pointer" id="openPlaylist">
+    📂 Playlist
+  </div>
 </div>
 
 <div class="modal" id="modal">
   <div class="modal-content">
-    <h3>Daftar Lagu</h3>
     <ul class="playlist" id="playlist"></ul>
   </div>
 </div>
@@ -187,118 +216,103 @@ input[type=range]::-webkit-slider-thumb{
 <audio id="audio"></audio>
 
 <script>
-const songs=[
-  {name:"BINTANG 5", url:"lagu/BINTANG5.mp3"},
-  {name:"ROPPANG",   url:"lagu/ROPPANG.mp3"},
-  {name:"KELINGAN MANTAN", url:"lagu/KELINGANMANTAN.mp3"},
-  {name:"MENCINTAI DENGAN NGEYEL", url:"lagu/MENCINTAIDENGANNGEYEL.mp3"},
-  {name:"JAUH KO PERGI", url:"lagu/JAUHKOPERGI.mp3"},
-  {name:"EMANEN WAKTUMU", url:"lagu/EMANENWAKTUMU.mp3"}
-];
+const playlists={
+  Remix:[
+    {
+      name:"BINTANG 5",
+      file:"DJBINTANG5.mp3",
+      video:"https://www.youtube.com/watch?v=OuKnhKiNTFw"
+    },
+    {
+      name:"EMANEN WAKTU",
+      file:"DJEMANENWAKTU.mp3",
+      video:"https://www.youtube.com/embed/VIDEO_ID_2"
+    }
+  ]
+};
 
 const audio=document.getElementById("audio");
+const bgVideo=document.getElementById("bgVideo");
+const bars=document.querySelectorAll(".bar");
 const playBtn=document.getElementById("playBtn");
-const prevBtn=document.getElementById("prevBtn");
-const nextBtn=document.getElementById("nextBtn");
 const shuffleBtn=document.getElementById("shuffleBtn");
 const repeatBtn=document.getElementById("repeatBtn");
-const playlist=document.getElementById("playlist");
+const nextBtn=document.getElementById("nextBtn");
+const prevBtn=document.getElementById("prevBtn");
+const playlistEl=document.getElementById("playlist");
 const coverTitle=document.getElementById("coverTitle");
-const progress=document.getElementById("progress");
-const currentEl=document.getElementById("current");
-const durationEl=document.getElementById("duration");
 const modal=document.getElementById("modal");
 const openPlaylist=document.getElementById("openPlaylist");
+const currentEl=document.getElementById("current");
+const durationEl=document.getElementById("duration");
+const progress=document.getElementById("progress");
 
-let current=0, shuffle=false, repeat=false;
+let currentSongs=[],currentIndex=0;
+let shuffle=false,repeatMode=0;
 
-songs.forEach((s,i)=>{
-  const li=document.createElement("li");
-  li.textContent=s.name;
-  li.onclick=()=>{
-    playSong(i);
-    modal.classList.remove("active");
-  };
-  playlist.appendChild(li);
-});
+setInterval(()=>{
+  bars.forEach(b=>{
+    b.style.height=audio.paused?"20px":(20+Math.random()*100)+"px";
+  });
+},120);
 
-function playSong(i){
-  current=i;
-  audio.src=songs[i].url;
-  coverTitle.textContent=songs[i].name;
-  audio.play().catch(()=>{});
-  playBtn.textContent="⏸️";
-  updateUI();
+function showSongs(){
+  playlistEl.innerHTML="";
+  currentSongs=playlists.Remix;
+  currentSongs.forEach((s,i)=>{
+    const li=document.createElement("li");
+    li.textContent="🎵 "+s.name;
+    li.onclick=()=>{playSong(i);modal.classList.remove("active");};
+    playlistEl.appendChild(li);
+  });
 }
 
-function updateUI(){
-  [...playlist.children].forEach((li,i)=>{
-    li.classList.toggle("active",i===current);
-  });
+function playSong(i){
+  currentIndex=i;
+  const song=currentSongs[i];
+  audio.src="lagu/Remix/"+song.file;
+  coverTitle.textContent=song.name;
+
+  bgVideo.innerHTML=
+   `<iframe src="${song.video}?autoplay=1&mute=1&loop=1&playlist=${song.video.split('/').pop()}" frameborder="0" allow="autoplay"></iframe>`;
+  bgVideo.classList.add("active");
+
+  audio.play();
+  playBtn.textContent="⏸️";
+  playBtn.classList.add("playing");
 }
 
 playBtn.onclick=()=>{
   if(audio.paused){
     audio.play();
+    bgVideo.classList.add("active");
     playBtn.textContent="⏸️";
+    playBtn.classList.add("playing");
   }else{
     audio.pause();
+    bgVideo.classList.remove("active");
     playBtn.textContent="▶️";
+    playBtn.classList.remove("playing");
   }
 };
 
-nextBtn.onclick=()=>nextSong();
-prevBtn.onclick=()=>prevSong();
-
-shuffleBtn.onclick=()=>{
-  shuffle=!shuffle;
-  shuffleBtn.classList.toggle("active",shuffle);
-};
-
-repeatBtn.onclick=()=>{
-  repeat=!repeat;
-  repeatBtn.classList.toggle("active",repeat);
-};
-
-function nextSong(){
-  if(shuffle) playSong(Math.floor(Math.random()*songs.length));
-  else playSong((current+1)%songs.length);
-}
-
-function prevSong(){
-  playSong((current-1+songs.length)%songs.length);
-}
-
-openPlaylist.onclick=()=>modal.classList.add("active");
-modal.onclick=e=>{
-  if(e.target===modal) modal.classList.remove("active");
-};
+audio.onended=()=>bgVideo.classList.remove("active");
 
 audio.ontimeupdate=()=>{
   const p=(audio.currentTime/audio.duration)*100||0;
   progress.value=p;
-  progress.style.background=
-    `linear-gradient(to right,#1db954 ${p}%,#222 ${p}%)`;
+  progress.style.setProperty("--seek",p+"%");
   currentEl.textContent=format(audio.currentTime);
 };
+audio.onloadedmetadata=()=>durationEl.textContent=format(audio.duration);
+progress.oninput=()=>audio.currentTime=(progress.value/100)*audio.duration;
 
-audio.onloadedmetadata=()=>{
-  durationEl.textContent=format(audio.duration);
-};
+openPlaylist.onclick=()=>{modal.classList.add("active");showSongs();}
+modal.onclick=e=>e.target===modal&&modal.classList.remove("active");
 
-progress.oninput=()=>{
-  audio.currentTime=(progress.value/100)*audio.duration;
-};
-
-audio.onended=()=>{
-  if(repeat) playSong(current);
-  else nextSong();
-};
-
-function format(sec){
-  const m=Math.floor(sec/60);
-  const s=Math.floor(sec%60).toString().padStart(2,"0");
-  return m+":"+s;
+function format(s){
+  const m=Math.floor(s/60);
+  return m+":"+Math.floor(s%60).toString().padStart(2,"0");
 }
 </script>
 
